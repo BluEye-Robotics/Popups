@@ -14,6 +14,8 @@ namespace MPowerKit.Popups;
 
 public partial class PopupService
 {
+    public Activity? CurrentActivity { get; set; }
+
     protected FragmentLifecycleCallback? Observer { get; set; }
     private WeakReference<FragmentManager>? _fmReference;
 
@@ -55,7 +57,7 @@ public partial class PopupService
     {
         HandleAccessibility(true, page, parentWindow.Page);
 
-        var activity = parentWindow.Handler.PlatformView as Activity
+        var activity = (CurrentActivity ?? parentWindow.Handler.PlatformView as Activity)
             ?? throw new InvalidOperationException("Activity not found");
 
         var dv = activity.Window?.DecorView as ViewGroup
