@@ -83,7 +83,7 @@ public class ScaleAnimation : FadeAnimation
 
             if (PositionIn is not MoveAnimationOptions.Center)
             {
-                taskList.Add(content.TranslateTo(_defaultTranslationX, _defaultTranslationY, (uint)DurationIn.TotalMilliseconds, EasingIn));
+                taskList.Add(content.TranslateToAsync(_defaultTranslationX, _defaultTranslationY, (uint)DurationIn.TotalMilliseconds, EasingIn));
             }
         }
 
@@ -124,7 +124,7 @@ public class ScaleAnimation : FadeAnimation
                 translationX = leftOffset;
             }
 
-            taskList.Add(content.TranslateTo(translationX, translationY, (uint)DurationOut.TotalMilliseconds, EasingOut));
+            taskList.Add(content.TranslateToAsync(translationX, translationY, (uint)DurationOut.TotalMilliseconds, EasingOut));
         }
 
         return Task.WhenAll(taskList);
