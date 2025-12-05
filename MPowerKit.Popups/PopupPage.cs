@@ -44,7 +44,7 @@ public class PopupPage : ContentPage
 
         BackgroundColor = Color.FromArgb("#50000000");
 
-        Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific.Page.SetUseSafeArea(this, HasSystemPadding);
+        SafeAreaEdges = HasSystemPadding ? SafeAreaEdges.All : SafeAreaEdges.None;
 
         this.Unloaded += PopupPage_Unloaded;
     }
@@ -73,7 +73,7 @@ public class PopupPage : ContentPage
 
         if (propertyName == HasSystemPaddingProperty.PropertyName)
         {
-            Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific.Page.SetUseSafeArea(this, HasSystemPadding);
+            SafeAreaEdges = HasSystemPadding ? SafeAreaEdges.All : SafeAreaEdges.None;
         }
     }
 
