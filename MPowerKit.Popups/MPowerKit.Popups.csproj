@@ -2,6 +2,8 @@
 
 	<PropertyGroup>
 		<TargetFrameworks>net10.0;net10.0-android;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+		<!-- The iOS and Mac Catalyst workloads cannot be installed on Linux, so a Linux host builds only the other targets. -->
+		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Linux'))">net10.0;net10.0-android</TargetFrameworks>
 		
 		<UseMaui>true</UseMaui>
 		<SingleProject>true</SingleProject>
