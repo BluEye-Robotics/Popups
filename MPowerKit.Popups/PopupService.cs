@@ -23,9 +23,21 @@ public partial class PopupService : IPopupService
 			throw new InvalidOperationException("This popup already presented");
 		}
 
-		var window = Application.Current?.Windows[^1];
+		return ShowPopupAsync(page, GetDefaultParentWindow(), animated);
+	}
 
-		return ShowPopupAsync(page, window, animated);
+	/// <summary>
+	/// Gets the window a popup shown without one attaches to. With several windows on screen,
+	/// that is the one the user is working in; override to tell it the app's way.
+	/// </summary>
+	/// <returns>The window, or null when the app has none.</returns>
+	protected virtual Window? GetDefaultParentWindow()
+	{
+#if IOS || MACCATALYST
+		return FindKeySceneWindow() ?? Application.Current?.Windows[^1];
+#else
+		return Application.Current?.Windows[^1];
+#endif
 	}
 
 	public virtual async ValueTask ShowPopupAsync(PopupPage page, Window? attachToWindow, bool animated = true)

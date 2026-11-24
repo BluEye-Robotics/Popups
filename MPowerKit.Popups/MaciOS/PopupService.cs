@@ -1,4 +1,6 @@
-﻿using CoreGraphics;
+﻿using System.Runtime.CompilerServices;
+
+using CoreGraphics;
 
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
@@ -12,6 +14,10 @@ public partial class PopupService
     protected static readonly List<UIWindow> PrevKeyWindows = [];
 
     protected readonly List<UIWindow> Windows = [];
+
+    // The window each popup took key status from. With several windows on screen, popups in
+    // different windows close in any order, so each restores its own rather than the last stored.
+    private readonly ConditionalWeakTable<PopupPage, UIWindow> _prevKeyWindowByPopup = new();
 
     protected virtual partial void AttachToWindow(PopupPage page, IViewHandler pageHandler, Window parentWindow)
     {
@@ -34,7 +40,9 @@ public partial class PopupService
 
         handler.ViewController!.View!.AddGestureRecognizer(gr);
 
-        var prevKeyWindow = GetKeyWindow();
+        // The parent's own scene: with several windows on screen, the first active scene may
+        // be another window's.
+        var prevKeyWindow = window.WindowScene?.Windows.FirstOrDefault(w => w.IsKeyWindow) ?? GetKeyWindow();
 
         var action = new DisposableAction(() =>
         {
@@ -42,16 +50,22 @@ public partial class PopupService
         });
         page.SetValue(DisposableActionAttached.DisposableActionProperty, action);
 
-        AddToVisualTree(handler);
+        AddToVisualTree(handler, window.WindowScene);
 
         (prevKeyWindow ?? window).WindowLevel = -1;
 
         StorePrevKeyWindow(prevKeyWindow);
+        if (prevKeyWindow is not null)
+        {
+            _prevKeyWindowByPopup.AddOrUpdate(page, prevKeyWindow);
+        }
     }
 
-    protected virtual void AddToVisualTree(IPlatformViewHandler handler)
+    protected virtual void AddToVisualTree(IPlatformViewHandler handler) => AddToVisualTree(handler, null);
+
+    protected virtual void AddToVisualTree(IPlatformViewHandler handler, UIWindowScene? scene)
     {
-        var connectedScene = GetActiveScene();
+        var connectedScene = scene ?? GetActiveScene();
         PopupWindow popupWindow = connectedScene is not null
             ? new(connectedScene)
             : new();
@@ -77,7 +91,18 @@ public partial class PopupService
 
         RemoveFromVisualTree(handler);
 
-        var wnd = RestorePrevKeyWindow() ?? window;
+        UIWindow? wnd;
+        if (_prevKeyWindowByPopup.TryGetValue(page, out var prev))
+        {
+            _prevKeyWindowByPopup.Remove(page);
+            PrevKeyWindows.Remove(prev);
+            // The window may have closed while the popup was open.
+            wnd = prev.WindowScene is not null ? prev : window;
+        }
+        else
+        {
+            wnd = RestorePrevKeyWindow() ?? window;
+        }
 
         wnd.WindowLevel = UIWindowLevel.Normal;
 
@@ -154,6 +179,25 @@ public partial class PopupService
                 ? null
                 : hitTestResult;
         }
+    }
+
+    /// <summary>
+    /// Finds the MAUI window in the scene that holds the key window, the one the user is
+    /// working in when the app has several windows on screen.
+    /// </summary>
+    private static Window? FindKeySceneWindow()
+    {
+        var keyScene = UIApplication.SharedApplication.ConnectedScenes
+            .OfType<UIWindowScene>()
+            .FirstOrDefault(scene => scene.ActivationState == UISceneActivationState.ForegroundActive
+                && scene.Windows.Any(w => w.IsKeyWindow));
+        if (keyScene is null)
+        {
+            return null;
+        }
+
+        return Application.Current?.Windows.LastOrDefault(w =>
+            w.Handler?.PlatformView is UIWindow uiWindow && ReferenceEquals(uiWindow.WindowScene, keyScene));
     }
 
     public static UIWindow? GetKeyWindow()
